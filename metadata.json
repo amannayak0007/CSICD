@@ -1,0 +1,7 @@
+{
+  "name": "CSIDC Industrial Land Monitoring",
+  "description": "A GIS + AI-powered platform for CSIDC officials to monitor industrial land plots, detect encroachments, and track compliance using satellite imagery and spatial data analysis.",
+  "requestFramePermissions": [
+    "geolocation"
+  ]
+}
