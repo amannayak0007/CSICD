@@ -2,7 +2,20 @@
 import { GoogleGenAI, Type } from "@google/genai";
 import { Plot } from "../types";
 
-const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+// Safely initialize Gemini client so it never breaks the UI
+let ai: GoogleGenAI | null = null;
+
+try {
+  const apiKey = process.env.API_KEY;
+  if (apiKey) {
+    ai = new GoogleGenAI({ apiKey });
+  } else {
+    console.warn("GEMINI API key not found. AI features are disabled.");
+  }
+} catch (error) {
+  console.error("Failed to initialize GoogleGenAI client:", error);
+  ai = null;
+}
 
 export async function analyzePlotCompliance(plot: Plot) {
   const prompt = `
@@ -23,6 +36,10 @@ export async function analyzePlotCompliance(plot: Plot) {
     4. Urgency level
   `;
 
+  if (!ai) {
+    return "AI analysis is currently disabled due to missing or invalid configuration.";
+  }
+
   try {
     const response = await ai.models.generateContent({
       model: 'gemini-3-flash-preview',
@@ -31,7 +48,10 @@ export async function analyzePlotCompliance(plot: Plot) {
         thinkingConfig: { thinkingBudget: 0 }
       }
     });
-    return response.text;
+    // Newer @google/genai clients expose .text() helper
+    return typeof (response as any).text === "function"
+      ? (response as any).text()
+      : "Analysis generated. (Text format not recognized.)";
   } catch (error) {
     console.error("AI Analysis Error:", error);
     return "Analysis unavailable at the moment. Please check later.";
@@ -55,14 +75,21 @@ export async function generateRegionInsight(plots: Plot[]) {
         Provide a 2-sentence strategic insight for the regional manager.
     `;
 
+    if (!ai) {
+      return "Critical monitoring suggested for payment defaults and land utility.";
+    }
+
     try {
-        const response = await ai.models.generateContent({
-          model: 'gemini-3-flash-preview',
-          contents: prompt,
-          config: { thinkingConfig: { thinkingBudget: 0 } }
-        });
-        return response.text;
+      const response = await ai.models.generateContent({
+        model: 'gemini-3-flash-preview',
+        contents: prompt,
+        config: { thinkingConfig: { thinkingBudget: 0 } }
+      });
+      return typeof (response as any).text === "function"
+        ? (response as any).text()
+        : "Critical monitoring suggested for payment defaults and land utility.";
     } catch (e) {
-        return "Critical monitoring suggested for payment defaults and land utility.";
+      console.error("AI Insight Error:", e);
+      return "Critical monitoring suggested for payment defaults and land utility.";
     }
 }
